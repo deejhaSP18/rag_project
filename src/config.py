@@ -18,3 +18,6 @@ TOP_K = 4
 # Below this, the question is treated as unrelated to the indexed documents
 # (e.g. greetings/small talk) instead of forcing an answer from unrelated context.
 RELEVANCE_THRESHOLD = 0.46
+
+# Minimum cosine similarity for a chunk to be used; if none qualify, the LLM is not called.
+RELEVANCE_THRESHOLD = 0.55
