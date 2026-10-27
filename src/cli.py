@@ -54,6 +54,13 @@ def main():
 
     subparsers.add_parser("chat", help="Start an interactive chat session")
 
+    admin_parser = subparsers.add_parser("create-admin", help="Create an admin account for the web UI")
+    admin_parser.add_argument("username")
+
+    serve_parser = subparsers.add_parser("serve", help="Run the web API and chat UI")
+    serve_parser.add_argument("--host", default="127.0.0.1")
+    serve_parser.add_argument("--port", type=int, default=8000)
+
     args = parser.parse_args()
 
     if args.command == "ingest":
@@ -62,6 +69,24 @@ def main():
             ingest()
     elif args.command == "ask":
         ask_and_render(args.question, args.top_k)
+    elif args.command == "create-admin":
+        import getpass
+        import os
+
+        from . import accounts, db
+
+        db.init_db()
+        password = os.environ.get("RAG_ADMIN_PASSWORD") or getpass.getpass("Password: ")
+        try:
+            accounts.create_user(args.username, password, is_admin=True)
+        except accounts.AccountError as exc:
+            console.print(f"[red]{exc}[/red]")
+            raise SystemExit(1)
+        console.print(f"[green]Admin account '{args.username}' created.[/green]")
+    elif args.command == "serve":
+        import uvicorn
+
+        uvicorn.run("src.api:app", host=args.host, port=args.port)
     elif args.command == "chat":
         console.print(
             Panel(
