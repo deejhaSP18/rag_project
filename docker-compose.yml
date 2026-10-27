@@ -1,0 +1,60 @@
+# Everything in containers, including Ollama:   docker compose up --build
+# First start downloads the chat and embedding models (about 3.5 GB) into a volume; later starts reuse them.
+name: rag
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    # NVIDIA GPU (Linux/Windows with the NVIDIA container toolkit): uncomment
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # One-off job: pulls the models into the ollama volume, then exits.
+  models:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c", "ollama pull ${RAG_LLM_MODEL:-phi4-mini:latest} && ollama pull ${RAG_EMBED_MODEL:-nomic-embed-text}"]
+    restart: "no"
+
+  app:
+    build: .
+    depends_on:
+      ollama:
+        condition: service_healthy
+      models:
+        condition: service_completed_successfully
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      RAG_LLM_MODEL: ${RAG_LLM_MODEL:-phi4-mini:latest}
+      RAG_EMBED_MODEL: ${RAG_EMBED_MODEL:-nomic-embed-text}
+      RAG_ADMIN_USER: ${RAG_ADMIN_USER:-}
+      RAG_ADMIN_PASSWORD: ${RAG_ADMIN_PASSWORD:-}
+      RAG_AUTO_INDEX: "1"
+    ports:
+      - "${RAG_PORT:-8000}:8000"
+    volumes:
+      - rag-data:/app/data
+      - rag-storage:/app/storage
+    restart: unless-stopped
+
+volumes:
+  ollama-models:
+  rag-data:
+  rag-storage:

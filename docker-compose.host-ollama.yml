@@ -1,0 +1,28 @@
+# Only the app in a container; it uses the Ollama already running on your machine.
+#   docker compose -f docker-compose.host-ollama.yml up --build
+# Best on a Mac: native Ollama uses the GPU (Metal), Ollama inside Docker does not.
+# On Linux, make Ollama listen on all interfaces first (OLLAMA_HOST=0.0.0.0).
+name: rag
+
+services:
+  app:
+    build: .
+    environment:
+      OLLAMA_HOST: http://host.docker.internal:11434
+      RAG_LLM_MODEL: ${RAG_LLM_MODEL:-phi4-mini:latest}
+      RAG_EMBED_MODEL: ${RAG_EMBED_MODEL:-nomic-embed-text}
+      RAG_ADMIN_USER: ${RAG_ADMIN_USER:-}
+      RAG_ADMIN_PASSWORD: ${RAG_ADMIN_PASSWORD:-}
+      RAG_AUTO_INDEX: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${RAG_PORT:-8000}:8000"
+    volumes:
+      - rag-data:/app/data
+      - rag-storage:/app/storage
+    restart: unless-stopped
+
+volumes:
+  rag-data:
+  rag-storage:
