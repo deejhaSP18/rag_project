@@ -12,12 +12,29 @@ def get_collection():
     )
 
 
-def embed(texts):
+def reset_collection():
+    client = chromadb.PersistentClient(path=str(config.STORAGE_DIR))
+    try:
+        client.delete_collection(config.COLLECTION_NAME)
+    except Exception:
+        pass
+
+
+def _embed(texts, prefix):
     return [
         ollama.embeddings(
             model=config.EMBED_MODEL,
-            prompt=text,
+            prompt=f"{prefix}: {text}",
             options={"num_ctx": 8192},
         )["embedding"]
         for text in texts
     ]
+
+
+# nomic-embed-text expects a task prefix: documents and queries are embedded differently.
+def embed(texts):
+    return _embed(texts, "search_document")
+
+
+def embed_query(text):
+    return _embed([text], "search_query")[0]

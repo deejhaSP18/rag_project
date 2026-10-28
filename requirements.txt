@@ -2,3 +2,9 @@ ollama
 chromadb
 pypdf
 rich
+fastapi
+uvicorn
+sqlalchemy>=2.0,<3
+pdfplumber
+fastembed
+numpy
